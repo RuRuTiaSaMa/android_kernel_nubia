@@ -2581,7 +2581,7 @@ static int smb2_probe(struct platform_device *pdev)
 	chg->dev = &pdev->dev;
 	chg->param = v1_params;
 	chg->debug_mask = &__debug_mask;
-#if !defined(CONFIG_NUBIA_CHARGE_FEATURE)
+#if !defined(CONFIG_NUBIA_CHARGE_FEATURE) || defined(CONFIG_ZTE_NX563J)
 	chg->weak_chg_icl_ua = &__weak_chg_icl_ua;
 #endif
 	chg->try_sink_enabled = &__try_sink_enabled;
