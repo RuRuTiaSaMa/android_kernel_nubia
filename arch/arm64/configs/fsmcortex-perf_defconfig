@@ -342,6 +342,12 @@ CONFIG_QPNP_QNOVO=y
 CONFIG_MSM_PM=y
 CONFIG_APSS_CORE_EA=y
 CONFIG_MSM_APM=y
+<<<<<<< HEAD:arch/arm64/configs/fsmcortex-perf_defconfig
+=======
+CONFIG_TYPEC_AUDIO_ADAPTER_SWITCH=y
+# CONFIG_NUBIA_HW_STEP_CHARGE_FEATURE is not set
+CONFIG_NUBIA_CHARGE_FEATURE=y
+>>>>>>> 241aafe319ad... drivers: power: supply: qcom: move to SW based step-charging:arch/arm64/configs/lineage_NX563J_defconfig
 CONFIG_SENSORS_QPNP_ADC_VOLTAGE=y
 CONFIG_CPU_THERMAL=y
 CONFIG_LIMITS_MONITOR=y
