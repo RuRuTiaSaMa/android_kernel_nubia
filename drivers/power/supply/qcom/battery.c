@@ -455,7 +455,7 @@ static void get_fcc_split(struct pl_data *chip, int total_ua,
 	else
 		*master_ua = max(0, total_ua - *slave_ua);
 	*slave_ua = (*slave_ua * chip->taper_pct) / 100;
-#else
+#endif
 }
 
 static void get_fcc_step_update_params(struct pl_data *chip, int main_fcc_ua,
@@ -552,7 +552,7 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 	if (chip->pl_mode != POWER_SUPPLY_PL_NONE) {
 	#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
 		if(total_fcc_ua >= MIN_SPLIT_CHANGE_CURRENT_UA) {
-			split_fcc(chip, total_fcc_ua, &master_fcc_ua, &slave_fcc_ua);
+			get_fcc_split(chip, total_fcc_ua, &master_fcc_ua, &slave_fcc_ua);
 		}
 	#else
 		get_fcc_split(chip, total_fcc_ua,

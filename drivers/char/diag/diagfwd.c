@@ -518,7 +518,7 @@ void diag_update_md_clients(unsigned int type)
 				if (driver->client_map[j].pid != 0 &&
 					driver->client_map[j].pid ==
 					driver->md_session_map[i]->pid) {
-					if (!(driver->data_ready[i] & type)) {
+					if (!(driver->data_ready[j] & type)) {
 						driver->data_ready[j] |= type;
 						atomic_inc(
 						&driver->data_ready_notif[j]);
@@ -950,11 +950,8 @@ int diag_process_apps_pkt(unsigned char *buf, int len, int pid)
 	struct diag_cmd_reg_entry_t entry;
 	struct diag_cmd_reg_entry_t *temp_entry = NULL;
 	struct diag_cmd_reg_t *reg_item = NULL;
-<<<<<<< HEAD
 	struct diag_md_session_t *info = NULL;
-=======
-       int ntype = 0;
->>>>>>> b6e86ec27f90... drivers: char: diag: import nubia changes
+	int ntype = 0;
 
 	if (!buf)
 		return -EIO;
@@ -987,14 +984,10 @@ int diag_process_apps_pkt(unsigned char *buf, int len, int pid)
 						   driver->apps_rsp_buf,
 						   DIAG_MAX_RSP_SIZE);
 		if (write_len > 0)
-<<<<<<< HEAD
 			diag_send_rsp(driver->apps_rsp_buf, write_len, pid);
-=======
-			diag_send_rsp(driver->apps_rsp_buf, write_len, info);
                 if(ntype != 0){
                     pr_err("diag: In %s, received FTM debug cmd %s DIAG_CMD_LOG_ON_DMND\n", __func__, (ntype == 1) ? " wireless " : " wifi ");
                 }
->>>>>>> b6e86ec27f90... drivers: char: diag: import nubia changes
 		return 0;
 	}
 
@@ -1006,57 +999,26 @@ int diag_process_apps_pkt(unsigned char *buf, int len, int pid)
 		mutex_lock(&driver->md_session_lock);
 		info = diag_md_session_get_pid(pid);
 		if (info) {
-<<<<<<< HEAD
 			p_mask = info->peripheral_mask;
 			mutex_unlock(&driver->md_session_lock);
 			if (MD_PERIPHERAL_MASK(reg_item->proc) & p_mask)
-=======
-			if (MD_PERIPHERAL_MASK(reg_item->proc) &
-				info->peripheral_mask){
->>>>>>> b6e86ec27f90... drivers: char: diag: import nubia changes
 				write_len = diag_send_data(reg_item, buf, len);
-                            if(ntype != 0){
-                                pr_err("diag: In %s, received FTM debug cmd %s info\n", __func__, (ntype == 1) ? " wireless " : " wifi ");
-                            }
-			    }else{
-                            if(ntype != 0){
-                                pr_err("diag: In %s, received FTM debug cmd %s info ignore\n", __func__, (ntype == 1) ? " wireless " : " wifi ");
-                            }
-                }
 		} else {
 			mutex_unlock(&driver->md_session_lock);
 			if (MD_PERIPHERAL_MASK(reg_item->proc) &
-<<<<<<< HEAD
 				driver->logging_mask) {
 				mutex_unlock(&driver->cmd_reg_mutex);
 				diag_send_error_rsp(buf, len, pid);
 				return write_len;
 			}
 			else
-=======
-				driver->logging_mask){
-				mutex_unlock(&driver->cmd_reg_mutex);
-				diag_send_error_rsp(buf, len, info);
-                            if(ntype != 0){
-                                pr_err("diag: In %s, received FTM debug cmd %s no info error reg_item->proc %d driver->logging_mask %d\n", __func__, (ntype == 1) ? " wireless " : " wifi ", reg_item->proc, driver->logging_mask);
-                            }
-        return write_len;
-			    }
-			else{
->>>>>>> b6e86ec27f90... drivers: char: diag: import nubia changes
 				write_len = diag_send_data(reg_item, buf, len);
-                            if(ntype != 0){
-                                pr_err("diag: In %s, received FTM debug cmd %s no info success reg_item->proc %d driver->logging_mask %d\n", __func__, (ntype == 1) ? " wireless " : " wifi ", reg_item->proc, driver->logging_mask);
-                            }
-			    }
 		}
 		mutex_unlock(&driver->cmd_reg_mutex);
 		return write_len;
 	}
 	mutex_unlock(&driver->cmd_reg_mutex);
-        if(ntype != 0){
-            pr_err("diag: In %s, received FTM debug cmd %s maybe error\n", __func__, (ntype == 1) ? " wireless " : " wifi ");
-        }
+
 #if defined(CONFIG_DIAG_OVER_USB)
 	/* Check for the command/respond msg for the maximum packet length */
 	if ((*buf == 0x4b) && (*(buf+1) == 0x12) &&
@@ -1116,7 +1078,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len, int pid)
 		/* send response back */
 		//driver->apps_rsp_buf[0] = *buf;
 		memcpy(driver->apps_rsp_buf,buf,3);
-		diag_send_rsp(driver->apps_rsp_buf, 1, info);
+		diag_send_rsp(driver->apps_rsp_buf, 1, pid);
 		msleep(5000);
 		printk(KERN_CRIT "diag: reboot set, Rebooting SoC..\n");
 		kernel_restart(NULL);
@@ -1252,9 +1214,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len, int pid)
 		return 0;
 	}
 #endif
-        if(ntype != 0){
-            pr_err("diag: In %s, received FTM debug cmd %s error\n", __func__, (ntype == 1) ? " wireless " : " wifi ");
-        }
+
 	/* We have now come to the end of the function. */
 	if (chk_apps_only())
 		diag_send_error_rsp(buf, len, pid);
