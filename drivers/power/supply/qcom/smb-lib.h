@@ -64,13 +64,10 @@ enum print_reason {
 #define BATT_PROFILE_VOTER		"BATT_PROFILE_VOTER"
 #define OTG_DELAY_VOTER			"OTG_DELAY_VOTER"
 #define USBIN_I_VOTER			"USBIN_I_VOTER"
-#if !defined(CONFIG_NUBIA_CHARGE_FEATURE) || defined(CONFIG_ZTE_NX563J)
 #define WEAK_CHARGER_VOTER		"WEAK_CHARGER_VOTER"
 #define WBC_VOTER			"WBC_VOTER"
 #define OV_VOTER			"OV_VOTER"
 #define FCC_STEPPER_VOTER		"FCC_STEPPER_VOTER"
-#endif
-#define DC_USBIN_VOTER			"DC_USBIN_VOTER"
 
 #define VCONN_MAX_ATTEMPTS	3
 #define OTG_MAX_ATTEMPTS	3
@@ -250,9 +247,7 @@ struct smb_charger {
 	struct smb_chg_freq	chg_freq;
 	int			smb_version;
 	int			otg_delay_ms;
-#if !defined(CONFIG_NUBIA_CHARGE_FEATURE) || defined(CONFIG_ZTE_NX563J)
 	int			*weak_chg_icl_ua;
-#endif
 
 	/* locks */
 	struct mutex		lock;

@@ -103,37 +103,6 @@ unlock:
 	return rc;
 }
 
-#if defined(CONFIG_NUBIA_HW_STEP_CHARGE_FEATURE)
-static int smblib_get_step_cc_delta(struct smb_charger *chg, int *cc_delta_ua)
-{
-	int rc, step_state;
-	u8 stat;
-
-	if (!chg->step_chg_enabled) {
-		*cc_delta_ua = 0;
-		return 0;
-	}
-
-	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &stat);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't read BATTERY_CHARGER_STATUS_1 rc=%d\n",
-			rc);
-		return rc;
-	}
-
-	step_state = (stat & STEP_CHARGING_STATUS_MASK) >>
-				STEP_CHARGING_STATUS_SHIFT;
-	rc = smblib_get_charge_param(chg, &chg->param.step_cc_delta[step_state],
-				     cc_delta_ua);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't get step cc delta rc=%d\n", rc);
-		return rc;
-	}
-
-	return 0;
-}
-#endif
-
 static int smblib_get_jeita_cc_delta(struct smb_charger *chg, int *cc_delta_ua)
 {
 	int rc, cc_minus_ua;
@@ -566,7 +535,6 @@ static void smblib_rerun_apsd(struct smb_charger *chg)
 	int rc;
 
 	smblib_dbg(chg, PR_MISC, "re-running APSD\n");
-
 	if (chg->wa_flags & QC_AUTH_INTERRUPT_WA_BIT) {
 		rc = smblib_masked_write(chg,
 				USBIN_SOURCE_CHANGE_INTRPT_ENB_REG,
@@ -675,7 +643,6 @@ int smblib_mapping_cc_delta_from_field_value(struct smb_chg_param *param,
 static void smblib_uusb_removal(struct smb_charger *chg)
 {
 	int rc;
-
 	struct smb_irq_data *data;
 	struct storm_watch *wdata;
 
@@ -691,10 +658,10 @@ static void smblib_uusb_removal(struct smb_charger *chg)
 			wdata = &data->storm_data;
 			update_storm_count(wdata, WEAK_CHG_STORM_COUNT);
 			vote(chg->usb_icl_votable, BOOST_BACK_VOTER, false, 0);
-			vote(chg->usb_icl_votable, WEAK_CHARGER_VOTER, false, 0);
+			vote(chg->usb_icl_votable, WEAK_CHARGER_VOTER,
+					false, 0);
 		}
 	}
-
 	vote(chg->pl_disable_votable, PL_DELAY_VOTER, true, 0);
 	vote(chg->awake_votable, PL_DELAY_VOTER, false, 0);
 
@@ -980,13 +947,12 @@ override_suspend_config:
 	}
 
 	/* unsuspend after configuring current and override */
-	if (chg->typec_present){
-		rc = smblib_set_usb_suspend(chg, false);
-		if (rc < 0) {
-			smblib_err(chg, "Couldn't resume input rc=%d\n", rc);
-			goto enable_icl_changed_interrupt;
-		}
+	rc = smblib_set_usb_suspend(chg, false);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't resume input rc=%d\n", rc);
+		goto enable_icl_changed_interrupt;
 	}
+
 enable_icl_changed_interrupt:
 	return rc;
 }
@@ -3048,28 +3014,6 @@ static int smblib_recover_from_soft_jeita(struct smb_charger *chg)
 int smblib_get_prop_fcc_delta(struct smb_charger *chg,
 				union power_supply_propval *val)
 {
-#if defined(CONFIG_NUBIA_HW_STEP_CHARGE_FEATURE)
-	int rc, jeita_cc_delta_ua, step_cc_delta_ua, hw_cc_delta_ua = 0;
-
-	rc = smblib_get_step_cc_delta(chg, &step_cc_delta_ua);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't get step cc delta rc=%d\n", rc);
-		step_cc_delta_ua = 0;
-	} else {
-		hw_cc_delta_ua = step_cc_delta_ua;
-	}
-
-	rc = smblib_get_jeita_cc_delta(chg, &jeita_cc_delta_ua);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't get jeita cc delta rc=%d\n", rc);
-		jeita_cc_delta_ua = 0;
-	} else if (jeita_cc_delta_ua < 0) {
-		/* HW will take the min between JEITA and step charge */
-		hw_cc_delta_ua = min(hw_cc_delta_ua, jeita_cc_delta_ua);
-	}
-
-	val->intval = hw_cc_delta_ua;
-#else
 	int rc, jeita_cc_delta_ua = 0;
 
 	rc = smblib_get_jeita_cc_delta(chg, &jeita_cc_delta_ua);
@@ -3079,7 +3023,6 @@ int smblib_get_prop_fcc_delta(struct smb_charger *chg,
 	}
 
 	val->intval = jeita_cc_delta_ua;
-#endif
 	return 0;
 }
 
@@ -3775,7 +3718,6 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: apsd-done rising; %s detected\n",
 		   apsd_result->name);
-
 }
 
 irqreturn_t smblib_handle_usb_source_change(int irq, void *data)
@@ -4031,7 +3973,8 @@ static void smblib_handle_typec_removal(struct smb_charger *chg)
 			wdata = &data->storm_data;
 			update_storm_count(wdata, WEAK_CHG_STORM_COUNT);
 			vote(chg->usb_icl_votable, BOOST_BACK_VOTER, false, 0);
-			vote(chg->usb_icl_votable, WEAK_CHARGER_VOTER, false, 0);
+			vote(chg->usb_icl_votable, WEAK_CHARGER_VOTER,
+					false, 0);
 		}
 	}
 
@@ -4168,13 +4111,12 @@ unlock:
 
 static void smblib_handle_typec_insertion(struct smb_charger *chg)
 {
-	int rc = 0;
+	int rc;
 
 	vote(chg->pd_disallowed_votable_indirect, CC_DETACHED_VOTER, false, 0);
 
 	/* disable APSD CC trigger since CC is attached */
 	rc = smblib_masked_write(chg, TYPE_C_CFG_REG, APSD_START_ON_CC_BIT, 0);
-
 	if (rc < 0)
 		smblib_err(chg, "Couldn't disable APSD_START_ON_CC rc=%d\n",
 									rc);
@@ -4243,7 +4185,6 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 
 	if (!chg->typec_present && chg->typec_mode != POWER_SUPPLY_TYPEC_NONE) {
 		chg->typec_present = true;
-
 		smblib_dbg(chg, PR_MISC, "TypeC %s insertion\n",
 			smblib_typec_mode_name[chg->typec_mode]);
 		smblib_handle_typec_insertion(chg);
@@ -4253,6 +4194,7 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 		smblib_dbg(chg, PR_MISC, "TypeC removal\n");
 		smblib_handle_typec_removal(chg);
 	}
+
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: cc-state-change; Type-C %s detected\n",
 				smblib_typec_mode_name[chg->typec_mode]);
 }
@@ -4352,7 +4294,6 @@ irqreturn_t smblib_handle_switcher_power_ok(int irq, void *data)
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
 	struct storm_watch *wdata = &irq_data->storm_data;
-
 	int rc, usb_icl;
 	u8 stat;
 
@@ -4411,18 +4352,14 @@ irqreturn_t smblib_handle_wdog_bark(int irq, void *data)
 	struct smb_charger *chg = irq_data->parent_data;
 	int rc;
 
-#if !defined(CONFIG_NUBIA_HW_STEP_CHARGE_FEATURE)
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
-#endif
 
 	rc = smblib_write(chg, BARK_BITE_WDOG_PET_REG, BARK_BITE_WDOG_PET_BIT);
 	if (rc < 0)
 		smblib_err(chg, "Couldn't pet the dog rc=%d\n", rc);
 
-#if !defined(CONFIG_NUBIA_HW_STEP_CHARGE_FEATURE)
 	if (chg->step_chg_enabled || chg->sw_jeita_enabled)
 		power_supply_changed(chg->batt_psy);
-#endif
 
 	return IRQ_HANDLED;
 }

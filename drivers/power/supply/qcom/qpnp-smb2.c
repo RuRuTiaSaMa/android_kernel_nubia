@@ -331,31 +331,6 @@ static int smb2_parse_dt(struct smb2 *chip)
 	return 0;
 }
 
-#if defined(CONFIG_TYPEC_AUDIO_ADAPTER_SWITCH)
-#include <linux/of_gpio.h>
-static int smb2_pre_parse_dt(struct smb2 *chip)
-{
-	struct smb_charger *chg = &chip->chg;
-	struct device_node *node = chg->dev->of_node;
-
-	if (!node) {
-		pr_err("device tree node missing\n");
-		return -EINVAL;
-	}
-
-	chg->usb_audio_select_supported = of_property_read_bool(node,
-					"qcom,usb-audio-select-support");
-
-	chg->switch_en = of_get_named_gpio(node, "qcom,switch-en-gpio", 0);
-
-	chg->switch_select = of_get_named_gpio(node, "qcom,switch-select-gpio", 0);
-
-	chg->mbhc_int = of_get_named_gpio(node, "qcom,mbhc-int-gpio", 0);
-
-	return 0;
-}
-#endif
-
 /************************
  * USB PSY REGISTRATION *
  ************************/
@@ -403,7 +378,6 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		rc = smblib_get_prop_usb_online(chg, val);
-
 		if (!val->intval)
 			break;
 
@@ -1217,6 +1191,7 @@ static int smb2_init_batt_psy(struct smb2 *chip)
 	struct power_supply_config batt_cfg = {};
 	struct smb_charger *chg = &chip->chg;
 	int rc = 0;
+
 	batt_cfg.drv_data = chg;
 	batt_cfg.of_node = chg->dev->of_node;
 	chg->batt_psy = power_supply_register(chg->dev,
@@ -1320,7 +1295,6 @@ static int smb2_init_vconn_regulator(struct smb2 *chip)
 /***************************
  * HARDWARE INITIALIZATION *
  ***************************/
-
 static int smb2_config_wipower_input_power(struct smb2 *chip, int uw)
 {
 	int rc;
@@ -1498,7 +1472,6 @@ static int smb2_init_hw(struct smb2 *chip)
 	int rc;
 	u8 stat, val;
 
-
 	if (chip->dt.no_battery)
 		chg->fake_capacity = 50;
 
@@ -1588,11 +1561,11 @@ static int smb2_init_hw(struct smb2 *chip)
 			chg->micro_usb_mode, 0);
 	vote(chg->hvdcp_enable_votable, MICRO_USB_VOTER,
 			chg->micro_usb_mode, 0);
+
 	/*
 	 * AICL configuration:
 	 * start from min and AICL ADC disable
 	 */
-
 	rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
 			USBIN_AICL_START_AT_MAX_BIT
 				| USBIN_AICL_ADC_EN_BIT, 0);
@@ -1668,7 +1641,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		pr_err("Couldn't configue WD config rc=%d\n", rc);
 		return rc;
 	}
-
 
 	/* configure wipower watts */
 	rc = smb2_config_wipower_input_power(chip, chip->dt.wipower_max_uw);
@@ -1915,7 +1887,6 @@ static int smb2_determine_initial_status(struct smb2 *chip)
 	smblib_handle_usb_source_change(0, &irq_data);
 	smblib_handle_chg_state_change(0, &irq_data);
 	smblib_handle_icl_change(0, &irq_data);
-
 	smblib_handle_batt_temp_changed(0, &irq_data);
 	smblib_handle_wdog_bark(0, &irq_data);
 
@@ -2290,6 +2261,7 @@ static int smb2_probe(struct platform_device *pdev)
 	chg->param = v1_params;
 	chg->debug_mask = &__debug_mask;
 	chg->try_sink_enabled = &__try_sink_enabled;
+	chg->weak_chg_icl_ua = &__weak_chg_icl_ua;
 	chg->mode = PARALLEL_MASTER;
 	chg->irq_info = smb2_irqs;
 	chg->name = "PMI";
@@ -2307,13 +2279,6 @@ static int smb2_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-#if defined(CONFIG_TYPEC_AUDIO_ADAPTER_SWITCH)
-	rc = smb2_pre_parse_dt(chip);
-	if (rc < 0) {
-		pr_err("Couldn't pre-parse dt. rc=%d\n", rc);
-		return rc;
-	}
-#endif
 	rc = smb2_parse_dt(chip);
 	if (rc < 0) {
 		pr_err("Couldn't parse device tree rc=%d\n", rc);
