@@ -7,3 +7,6 @@ obj-$(CONFIG_AL3200) += miniisp_ctrl.o
 obj-$(CONFIG_AL3200) += operation_cmd.o
 obj-$(CONFIG_AL3200) += sys_manage_cmd.o
 
+# For clang compile
+subdir-ccflags-y += \
+       -Wno-pragma-pack
