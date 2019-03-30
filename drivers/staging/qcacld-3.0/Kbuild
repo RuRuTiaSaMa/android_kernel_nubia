@@ -274,7 +274,7 @@ endif
 # Feature flags which are not (currently) configurable via Kconfig
 
 #Whether to build debug version
-BUILD_DEBUG_VERSION := 1
+BUILD_DEBUG_VERSION := 0
 
 #Enable this flag to build driver in diag version
 BUILD_DIAG_VERSION := 1
@@ -1912,6 +1912,11 @@ CDEFINES += -DFEATURE_MULTICAST_HOST_FW_MSGS
 endif
 
 KBUILD_CPPFLAGS += $(CDEFINES)
+
+
+# To build without debug just ignore not used code.
+EXTRA_CFLAGS += $(call cc-disable-warning,unused-variable,)
+EXTRA_CFLAGS += $(call cc-disable-warning,unused-function,)
 
 # Currently, for versions of gcc which support it, the kernel Makefile
 # is disabling the maybe-uninitialized warning.  Re-enable it for the
