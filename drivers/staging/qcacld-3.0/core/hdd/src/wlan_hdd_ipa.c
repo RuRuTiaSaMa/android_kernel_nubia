@@ -5508,7 +5508,7 @@ int hdd_ipa_set_perf_level(hdd_context_t *hdd_ctx, uint64_t tx_packets,
 	return ret;
 }
 
-#ifdef QCA_CONFIG_SMP
+#ifdef PF_WAKE_UP_IDLE
 /**
  * hdd_ipa_get_wake_up_idle() - Get PF_WAKE_UP_IDLE flag in the task structure
  *
@@ -5539,7 +5539,7 @@ static int hdd_ipa_aggregated_rx_ind(qdf_nbuf_t skb)
 {
 	return netif_rx_ni(skb);
 }
-#else /* QCA_CONFIG_SMP */
+#else /* PF_WAKE_UP_IDLE */
 static uint32_t hdd_ipa_get_wake_up_idle(void)
 {
 	return 0;
@@ -5575,7 +5575,7 @@ static int hdd_ipa_aggregated_rx_ind(qdf_nbuf_t skb)
 
 	return result;
 }
-#endif /* QCA_CONFIG_SMP */
+#endif /* PF_WAKE_UP_IDLE */
 
 /**
  * hdd_ipa_send_skb_to_network() - Send skb to kernel
