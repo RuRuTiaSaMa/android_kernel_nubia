@@ -189,6 +189,7 @@ static ssize_t synaptics_rmi4_f01_flashprog_show(struct device *dev,
 static ssize_t synaptics_rmi4_0dbutton_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
 
+unsigned int nubia_button_0d_enabled = 1;
 static ssize_t synaptics_rmi4_0dbutton_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
@@ -1047,6 +1048,7 @@ static ssize_t synaptics_rmi4_0dbutton_store(struct device *dev,
 	}
 
 	rmi4_data->button_0d_enabled = input;
+	nubia_button_0d_enabled = input;
 
 	return count;
 }
@@ -2007,7 +2009,8 @@ static void synaptics_rmi4_report_touch(struct synaptics_rmi4_data *rmi4_data,
 			rmi4_data->fingers_on_2d = false;
 		break;
 	case SYNAPTICS_RMI4_F1A:
-		synaptics_rmi4_f1a_report(rmi4_data, fhandler);
+		if(rmi4_data->button_0d_enabled != 0)
+			synaptics_rmi4_f1a_report(rmi4_data, fhandler);
 		break;
 	default:
 		break;
@@ -3475,6 +3478,7 @@ flash_prog_mode:
 	}
 
 	rmi4_data->enable_wakeup_gesture = nubia_wakeup_gesture;
+	rmi4_data->button_0d_enabled = nubia_button_0d_enabled;
 
 	synaptics_rmi4_set_configured(rmi4_data);
 
