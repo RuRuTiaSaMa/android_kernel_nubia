@@ -68,7 +68,7 @@
 #define SYNAPTICS_PINCTRL_STATE_ACTIVE "synaptics_pin_active"
 #endif
 
-#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT_FLAG
+#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT
 #define SYNAPTICS_PALM_ADDR 0X0400
 #define SYNAPTICS_PALM_F12_ADDR 0x0418
 #define PRESSURE_BASE 30
@@ -1192,7 +1192,7 @@ static ssize_t synaptics_rmi4_virtual_key_map_show(struct kobject *kobj,
 }
 
 //nubia for palm sleep
-#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT_FLAG
+#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT
 static bool isLargeTouch(struct synaptics_rmi4_data *rmi4_data)
 {
 	int retval;
@@ -1229,9 +1229,9 @@ static int report_palm_event(struct synaptics_rmi4_data *rmi4_data)
 		nubia_force_cal();
 		usleep_range(100000,100000);
 		//end nubia
-		input_report_key(rmi4_data->input_dev, KEY_F9, 1);
+		input_report_key(rmi4_data->input_dev, KEY_SLEEP, 1);
 		input_sync(rmi4_data->input_dev);
-		input_report_key(rmi4_data->input_dev, KEY_F9, 0);
+		input_report_key(rmi4_data->input_dev, KEY_SLEEP, 0);
 		input_sync(rmi4_data->input_dev);
 		rmi4_data->palm_suspend = true;
 	}
@@ -1293,11 +1293,6 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	struct synaptics_rmi4_f11_data_1_5 data;
 	struct synaptics_rmi4_f11_extra_data *extra_data;
 
-	//nubia for report a random pressure value
-	#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT_FLAG
-	static unsigned int press_off = 0;
-	#endif
-
 	/*
 	 * The number of finger status registers is determined by the
 	 * maximum number of fingers supported - 2 bits per finger. So
@@ -1330,30 +1325,20 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 		return 0;
 	}
 
-	//nubia for palm sleep
-	#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT_FLAG
-	if (isLargeTouch(rmi4_data))
-	{
+//nubia for palm sleep
+#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT
+	if (rmi4_data->palm_sleep && isLargeTouch(rmi4_data)) {
 		printk("synaptics large touch detected.\n");
 		synaptics_rmi4_free_fingers(rmi4_data);
 
-		input_mt_slot(rmi4_data->input_dev, 0);
-		input_mt_report_slot_state(rmi4_data->input_dev,
-				MT_TOOL_FINGER, true);
-		input_report_abs(rmi4_data->input_dev,
-				ABS_MT_POSITION_X, 100);
-		input_report_abs(rmi4_data->input_dev,
-				ABS_MT_POSITION_Y, 0);
-		input_report_abs(rmi4_data->input_dev,
-				ABS_MT_PRESSURE, 1000);
+		input_report_key(rmi4_data->input_dev, KEY_SLEEP, 1);
 		input_sync(rmi4_data->input_dev);
 
-		input_mt_slot(rmi4_data->input_dev,0);
-		input_mt_report_slot_state(rmi4_data->input_dev,MT_TOOL_FINGER,false);
+		input_report_key(rmi4_data->input_dev, KEY_SLEEP, 0);
 		input_sync(rmi4_data->input_dev);
 		return 0;
 	}
-	#endif
+#endif
 
 	retval = synaptics_rmi4_reg_read(rmi4_data,
 			data_addr,
@@ -1432,14 +1417,6 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 					ABS_MT_POSITION_X, synaptics_rmi4_remap_position_x(x));
 			input_report_abs(rmi4_data->input_dev,
 					ABS_MT_POSITION_Y, y);
-
-			/*nubia for report a random pressure value,
-			otherwise the input event will not been reported*/
-			#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT_FLAG
-			press_off = (press_off + 1) % PRESSURE_MAX_OFFSET;
-			input_report_abs(rmi4_data->input_dev,
-					ABS_MT_PRESSURE, (PRESSURE_BASE + press_off));
-			#endif
 
 #ifdef REPORT_2D_W
 			input_report_abs(rmi4_data->input_dev,
@@ -1552,7 +1529,7 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	}
 
 //nubia for palm sleep
-#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT_FLAG
+#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT
 	if (!rmi4_data->palm_suspend && rmi4_data->palm_sleep) {
 		if (report_palm_event(rmi4_data))
 			return 0;
@@ -1686,11 +1663,6 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 						ABS_MT_TOUCH_MAJOR, wx);
 				input_report_abs(rmi4_data->input_dev,
 						ABS_MT_TOUCH_MINOR, wx);
-//nubia for palm sleep
-#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT
-				input_report_abs(rmi4_data->input_dev,
-						ABS_MT_PRESSURE, wx);
-#endif
 			} else {
 				input_report_abs(rmi4_data->input_dev,
 						ABS_MT_TOUCH_MAJOR,
@@ -1698,12 +1670,6 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 				input_report_abs(rmi4_data->input_dev,
 						ABS_MT_TOUCH_MINOR,
 						min(wx, wy));
-//nubia for palm sleep
-#ifdef NUBIA_SYNAPTICS_PALM_SUPPORT
-				input_report_abs(rmi4_data->input_dev,
-						ABS_MT_PRESSURE,
-						max(wx, wy));
-#endif
 			}
 #endif
 #ifdef REPORT_2D_PRESSURE
@@ -3585,8 +3551,8 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 
 //nubia for palm sleep
 #ifdef NUBIA_SYNAPTICS_PALM_SUPPORT
-	input_set_abs_params(rmi4_data->input_dev,
-				ABS_MT_PRESSURE, 0, 255, 0, 0);
+	set_bit(KEY_SLEEP, rmi4_data->input_dev->keybit);
+	input_set_capability(rmi4_data->input_dev, EV_KEY, KEY_SLEEP);
 #endif
 
 #ifdef TYPE_B_PROTOCOL
