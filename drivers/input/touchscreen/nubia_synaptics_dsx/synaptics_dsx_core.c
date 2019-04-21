@@ -229,6 +229,14 @@ static ssize_t synaptics_rmi4_palm_sleep_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 #endif
 
+#ifdef NUBIA_SYNAPTICS_SWAPBUTTON_SUPPORT
+static ssize_t synaptics_rmi4_swap_buttons_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
+
+static ssize_t synaptics_rmi4_swap_buttons_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
+#endif
+
 static ssize_t synaptics_rmi4_virtual_key_map_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf);
 
@@ -713,6 +721,12 @@ static struct  device_attribute nubia_tp_attrs[] = {
 		synaptics_rmi4_palm_sleep_show,
 		synaptics_rmi4_palm_sleep_store),
 #endif
+
+#ifdef NUBIA_SYNAPTICS_SWAPBUTTON_SUPPORT
+	__ATTR(swap_buttons, (S_IRUGO | S_IWUSR),
+			synaptics_rmi4_swap_buttons_show,
+			synaptics_rmi4_swap_buttons_store),
+#endif
 };
 #endif
 
@@ -1123,6 +1137,47 @@ static ssize_t synaptics_rmi4_palm_sleep_store(struct device *dev,
 	input = input > 0 ? 1 : 0;
 
 	rmi4_data->palm_sleep = input;
+
+	return count;
+}
+#endif
+
+#ifdef NUBIA_SYNAPTICS_SWAPBUTTON_SUPPORT
+static ssize_t synaptics_rmi4_swap_buttons_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+#ifdef NUBIA_TOUCH_SYNAPTICS
+	struct synaptics_rmi4_data *rmi4_data = nubia_tp;
+	if (NULL == rmi4_data) {
+		pr_err("%s:rmi4_data is NULL\n", __func__);
+		return snprintf(buf, PAGE_SIZE, "NULL\n");
+	}
+#else
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+#endif
+
+	return snprintf(buf, PAGE_SIZE, "%u\n",
+			rmi4_data->swap_buttons);
+}
+
+static ssize_t synaptics_rmi4_swap_buttons_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	unsigned int input;
+#ifdef NUBIA_TOUCH_SYNAPTICS
+	struct synaptics_rmi4_data *rmi4_data = nubia_tp;
+	if (NULL == rmi4_data) {
+		pr_err("%s:rmi4_data is NULL\n", __func__);
+		return -EFAULT;
+	}
+#else
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+#endif
+
+	if (sscanf(buf, "%u", &input) != 1)
+		return -EINVAL;
+
+	rmi4_data->swap_buttons = (input > 0);
 
 	return count;
 }
@@ -1809,6 +1864,7 @@ static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 	unsigned char index;
 	unsigned char shift;
 	unsigned char status;
+	unsigned char keycode;
 	unsigned char *data;
 	unsigned short data_addr = fhandler->full_addr.data_base;
 	struct synaptics_rmi4_f1a_handle *f1a = fhandler->data;
@@ -1858,6 +1914,12 @@ static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 		shift = button % 8;
 		status = ((data[index] >> shift) & MASK_1BIT);
 
+		if (button == 0 || !(rmi4_data -> swap_buttons)) {
+			keycode = f1a -> button_map[button];
+		} else {
+			keycode = f1a -> button_map[(f1a -> valid_button_count) - button];
+		}
+
 		if (current_status[button] == status)
 			continue;
 		else
@@ -1865,9 +1927,7 @@ static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 
 		dev_dbg(rmi4_data->pdev->dev.parent,
 				"%s: Button %d (code %d) ->%d\n",
-				__func__, button,
-				f1a->button_map[button],
-				status);
+				__func__, button, keycode, status);
 #ifdef NO_0D_WHILE_2D
 		if (rmi4_data->fingers_on_2d == false) {
 			if (status == 1) {
@@ -1882,15 +1942,13 @@ static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 			}
 			touch_count++;
 			input_report_key(rmi4_data->input_dev,
-					f1a->button_map[button],
-					status);
+					keycode, status);
 		} else {
 			if (before_2d_status[button] == 1) {
 				before_2d_status[button] = 0;
 				touch_count++;
 				input_report_key(rmi4_data->input_dev,
-						f1a->button_map[button],
-						status);
+					keycode, status);
 			} else {
 				if (status == 1)
 					while_2d_status[button] = 1;
@@ -1901,8 +1959,7 @@ static void synaptics_rmi4_f1a_report(struct synaptics_rmi4_data *rmi4_data,
 #else
 		touch_count++;
 		input_report_key(rmi4_data->input_dev,
-				f1a->button_map[button],
-				status);
+					keycode, status);
 #endif
 	}
 
