@@ -822,8 +822,11 @@ static ssize_t synaptics_rmi4_f01_flashprog_show(struct device *dev,
 static ssize_t synaptics_rmi4_0dbutton_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
+#ifdef NUBIA_TOUCH_SYNAPTICS
+	struct synaptics_rmi4_data *rmi4_data = nubia_tp;
+#else
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
-
+#endif
 	return snprintf(buf, PAGE_SIZE, "%u\n",
 			rmi4_data->button_0d_enabled);
 }
@@ -998,7 +1001,11 @@ static ssize_t synaptics_rmi4_0dbutton_store(struct device *dev,
 	unsigned char ii;
 	unsigned char intr_enable;
 	struct synaptics_rmi4_fn *fhandler;
+#ifdef NUBIA_TOUCH_SYNAPTICS
+	struct synaptics_rmi4_data *rmi4_data = nubia_tp;
+#else
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+#endif
 	struct synaptics_rmi4_device_info *rmi;
 
 	rmi = &(rmi4_data->rmi4_mod_info);
