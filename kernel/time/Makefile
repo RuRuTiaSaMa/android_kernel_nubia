@@ -13,3 +13,6 @@ obj-$(CONFIG_DEBUG_FS)				+= timekeeping_debug.o
 obj-$(CONFIG_TEST_UDELAY)			+= test_udelay.o
 
 ccflags-y += -Idrivers/cpuidle
+
+subdir-ccflags-y += \
+       -Wno-unused-function
